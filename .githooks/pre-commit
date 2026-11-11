@@ -1,0 +1,93 @@
+#!/bin/sh
+# 커밋 전 검사 (8.5)
+# - 커밋에 내가 소유하지 않은 폴더의 파일이 있으면 거부한다 (.github/CODEOWNERS 기준).
+# - develop 브랜치는 검사하지 않는다 (여러 사람 작업을 합치고 충돌을 해결하는 곳).
+# - main / product 에는 직접 커밋하지 않는다 (product 는 PR 로만 머지).
+# - 머지 커밋은 product 에서 받는 경우(개인 브랜치 최신화)만 허용한다.
+
+ROOT=$(git rev-parse --show-toplevel) || exit 1
+CODEOWNERS="$ROOT/.github/CODEOWNERS"
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+fail() {
+  echo "" >&2
+  echo "[pre-commit] 커밋 거부: $1" >&2
+  shift
+  for line in "$@"; do echo "  $line" >&2; done
+  echo "" >&2
+  exit 1
+}
+
+# 1) develop 은 검사하지 않음
+[ "$BRANCH" = "develop" ] && exit 0
+
+# 2) main / product 직접 커밋 금지
+case "$BRANCH" in
+  main|product)
+    fail "'$BRANCH' 브랜치에는 직접 커밋할 수 없습니다." \
+         "product 에서 개인 브랜치(feat/<영역>-<내용>)를 만들어 작업하고 PR 로 머지하세요." ;;
+esac
+
+# 3) 머지 커밋: product 에서 받는 경우만 허용 (develop -> 개인 브랜치 머지 금지)
+if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+  for base in product origin/product; do
+    if git rev-parse -q --verify "$base" >/dev/null &&
+       git merge-base --is-ancestor MERGE_HEAD "$base"; then
+      exit 0
+    fi
+  done
+  fail "product 가 아닌 브랜치를 머지하고 있습니다." \
+       "개인 브랜치 최신화는 product 에서만 받습니다. (develop -> 개인 브랜치 머지 금지)" \
+       "머지를 취소하려면: git merge --abort"
+fi
+
+# 4) 소유권 검사 — 저장소 최초 구성(팀원 C, 8.6-1)에서만 HACKATHON_BOOTSTRAP=1 로 건너뛴다
+if [ "$HACKATHON_BOOTSTRAP" = "1" ]; then
+  echo "[pre-commit] HACKATHON_BOOTSTRAP=1: 소유권 검사를 건너뜁니다 (최초 구성 전용)" >&2
+  exit 0
+fi
+ME=$(git config hackathon.owner)
+[ -z "$ME" ] && fail "내 소유자 토큰이 설정되지 않았습니다." \
+  "sh scripts/setup-hooks.sh @본인토큰   (CODEOWNERS 에 적힌 값)"
+[ -f "$CODEOWNERS" ] || fail ".github/CODEOWNERS 파일이 없습니다."
+
+# 파일 경로의 소유자 목록을 출력 (CODEOWNERS 에서 마지막으로 일치한 규칙)
+owners_of() {
+  file=$1
+  result=""
+  while IFS=' 	' read -r pat owners; do
+    case "$pat" in ''|'#'*) continue ;; esac
+    if [ "$pat" = "*" ]; then
+      result=$owners; continue
+    fi
+    glob=${pat#/}
+    case "$glob" in */) glob="${glob}*" ;; esac
+    # shellcheck disable=SC2254
+    case "$file" in $glob) result=$owners ;; esac
+  done < "$CODEOWNERS"
+  printf '%s' "$result"
+}
+
+VIOLATIONS=""
+FILES=$(git diff --cached --name-only --no-renames)
+OLDIFS=$IFS
+IFS='
+'
+for f in $FILES; do
+  owners=$(owners_of "$f")
+  ok=0
+  IFS=' '
+  for o in $owners; do [ "$o" = "$ME" ] && ok=1; done
+  IFS='
+'
+  [ $ok -eq 0 ] && VIOLATIONS="$VIOLATIONS
+    $f  (소유자: ${owners:-없음})"
+done
+IFS=$OLDIFS
+
+if [ -n "$VIOLATIONS" ]; then
+  fail "내($ME) 소유가 아닌 파일이 포함되어 있습니다:$VIOLATIONS" \
+       "" \
+       "해당 파일은 커밋에서 빼고(git restore --staged <파일>) 소유자에게 수정을 요청하세요."
+fi
+exit 0

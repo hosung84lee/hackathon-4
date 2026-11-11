@@ -1,0 +1,49 @@
+#!/bin/sh
+# push 전 검사 (8.4, 8.5)
+# - main / product 로 직접 push 금지 (PR 로만 머지). 단, 원격에 아직 없는 브랜치를 처음 만드는 push 는 허용.
+# - force push 금지. 예외: develop 초기화 (팀 합의 후 HACKATHON_ALLOW_DEVELOP_RESET=1 로 실행).
+
+ZERO=0000000000000000000000000000000000000000
+status=0
+
+reject() {
+  echo "" >&2
+  echo "[pre-push] push 거부: $1" >&2
+  shift
+  for line in "$@"; do echo "  $line" >&2; done
+  echo "" >&2
+  status=1
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  branch=${remote_ref#refs/heads/}
+  [ "$local_sha" = "$ZERO" ] && is_delete=1 || is_delete=0
+  [ "$remote_sha" = "$ZERO" ] && is_create=1 || is_create=0
+
+  case "$branch" in
+    main|product)
+      if [ $is_delete -eq 1 ]; then
+        reject "'$branch' 브랜치는 삭제할 수 없습니다."
+      elif [ $is_create -eq 0 ]; then
+        reject "'$branch' 브랜치로 직접 push 할 수 없습니다." \
+               "개인 브랜치를 push 한 뒤 GitHub 에서 PR 로 머지하세요 (squash 금지)."
+      fi
+      continue ;;
+  esac
+
+  # force push 검사 (삭제·신규 생성은 제외)
+  if [ $is_delete -eq 0 ] && [ $is_create -eq 0 ]; then
+    if ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+      reject "원격 '$branch' 의 최신 커밋이 로컬에 없습니다." "git fetch 후 다시 시도하세요."
+    elif ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+      if [ "$branch" = "develop" ] && [ "$HACKATHON_ALLOW_DEVELOP_RESET" = "1" ]; then
+        echo "[pre-push] develop 초기화 force push 허용 (HACKATHON_ALLOW_DEVELOP_RESET=1)" >&2
+      else
+        reject "'$branch' 로 force push(이력 덮어쓰기)는 금지입니다." \
+               "develop 초기화는 팀 합의 후 HACKATHON_ALLOW_DEVELOP_RESET=1 git push --force origin develop"
+      fi
+    fi
+  fi
+done
+
+exit $status

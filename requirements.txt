@@ -1,0 +1,7 @@
+# 관리자: 팀원 C. 추가가 필요하면 요청하고, 버전은 반드시 고정한다 (8.3)
+streamlit==1.40.1
+openai==1.54.4
+pydantic==2.9.2
+jsonschema==4.23.0
+PyMuPDF==1.24.13
+python-dotenv==1.0.1
