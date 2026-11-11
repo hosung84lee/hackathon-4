@@ -65,7 +65,7 @@ owners_of() {
     # shellcheck disable=SC2254
     case "$file" in $glob) result=$owners ;; esac
   done < "$CODEOWNERS"
-  printf '%s' "$result"
+  printf '%s' "$result" | tr -d '\r'   # Windows(CRLF) 체크아웃 대응
 }
 
 VIOLATIONS=""
