@@ -30,7 +30,7 @@ def run_calc_tool(tool_path: str, payload: dict[str, Any], timeout_sec: float | 
     timeout = timeout_sec or get_settings().calc_tool_timeout_sec
     try:
         proc = subprocess.run(
-            [sys.executable, "-I", str(path)],  # -I: 현재 폴더·환경변수의 모듈을 불러오지 않음
+            [sys.executable, "-I", "-X", "utf8", str(path)],  # -I: 현재 폴더·환경변수의 모듈 무시, -X utf8: Windows 에서도 UTF-8 입출력
             input=json.dumps(payload, ensure_ascii=False),
             capture_output=True,
             text=True,

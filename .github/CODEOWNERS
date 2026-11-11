@@ -1,31 +1,31 @@
 # 영역 소유권 목록 (8.1, 8.5)
 # - GitHub CODEOWNERS 형식. 아래쪽 규칙이 위쪽 규칙보다 우선한다 (마지막 일치 우선).
-# - @OWNER_A / @OWNER_B / @hosung84lee 는 실제 GitHub 아이디로 바꾼다.
+# - 팀원 A = @hosung84lee. @OWNER_B / @OWNER_C 는 실제 GitHub 아이디로 바꾼다.
 # - 커밋 전 검사(.githooks/pre-commit)가 이 파일을 읽는다.
 #   각자 `git config hackathon.owner @본인토큰` 으로 자신의 토큰을 등록한다 (scripts/setup-hooks.sh).
 #
 #   팀원 A: 흐름 1 약관 구조화 / 팀원 B: 흐름 2 청구 심사 / 팀원 C: 공통 기반
 
 # ── 기본: 루트 파일·공유 파일·공통 기반은 팀원 C ──────────────────────
-*                                         @hosung84lee
+*                                         @OWNER_C
 
 # ── 공통 기반 (팀원 C) ──────────────────────────────────────────────
-/src/agent/                               @hosung84lee
-/src/trace/                               @hosung84lee
-/src/backend/                             @hosung84lee
-/src/mcp_server/                          @hosung84lee
-/src/schema/                              @hosung84lee
-/src/app/                                 @hosung84lee
-/src/workflow/                            @hosung84lee
+/src/agent/                               @OWNER_C
+/src/trace/                               @OWNER_C
+/src/backend/                             @OWNER_C
+/src/mcp_server/                          @OWNER_C
+/src/schema/                              @OWNER_C
+/src/app/                                 @OWNER_C
+/src/workflow/                            @OWNER_C
 
 # ── 흐름 1: 약관 구조화 (팀원 A) ─────────────────────────────────────
-/src/workflow/policy_structuring.py       @OWNER_A
-/src/workflow/steps/policy_structuring/   @OWNER_A
-/src/skills/policy_*/                     @OWNER_A
-/src/schema/policy_structuring.py         @OWNER_A
-/src/app/views/policy_structuring.py      @OWNER_A
-/src/data/pdf/                            @OWNER_A
-/tests/test_policy_*                      @OWNER_A
+/src/workflow/policy_structuring.py       @hosung84lee
+/src/workflow/steps/policy_structuring/   @hosung84lee
+/src/skills/policy_*/                     @hosung84lee
+/src/schema/policy_structuring.py         @hosung84lee
+/src/app/views/policy_structuring.py      @hosung84lee
+/src/data/pdf/                            @hosung84lee
+/tests/test_policy_*                      @hosung84lee
 
 # ── 흐름 2: 청구 심사 (팀원 B) ──────────────────────────────────────
 /src/workflow/claim_review.py             @OWNER_B
