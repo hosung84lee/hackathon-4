@@ -1,0 +1,16 @@
+{
+  "claim": {
+    "policy": {"contract_date": "2025-01-10"},
+    "accident_date": "2026-03-01",
+    "accident_type": "상해",
+    "diagnoses": [{"code": "S82.1", "name": "경골 근위부 골절", "date": "2026-03-01"}],
+    "hospitalization": {"days": 5},
+    "surgeries": [{"code": "N0601", "name": "골절 관혈적 정복술"}],
+    "medical_expense": {"covered": 1200000, "non_covered": 300000},
+    "disability_rate": 0.0,
+    "death": false
+  },
+  "judgments": {
+    "FRACTURE_YN": {"result": "Y", "reason": "X-ray 판독지에 골절 소견", "sources": ["판독지"]}
+  }
+}
