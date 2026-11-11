@@ -19,7 +19,7 @@ def policy_structuring(run: Run) -> None:
     if run.ctx.data["find_coverage_pages"]["pages"]:            # 사고보장 페이지가 있을 때만 변환
         run.step(rebuild_pdf)
         run.step(convert_schema)
-        if run.ctx.data["convert_schema"]["structured_policy"]:  # 변환 결과가 있을 때만 계산 Tool 생성
+        if run.ctx.data["convert_schema"]["complete"]:           # 변환이 끝까지 됐을 때만 계산 Tool 생성
             run.step(generate_calc_tool)
     run.step(review_approval)                                   # 사람: 검토 대기 (반려 시 여기서 종료)
     if run.ctx.data["review_approval"]["structured_policy"]:    # 반영할 구조화 결과가 있을 때만

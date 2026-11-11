@@ -26,7 +26,8 @@ from src.trace.tracer import get_observations  # noqa: E402
 from src.workflow import engine  # noqa: E402
 from src.workflow.steps.policy_structuring._sample_pdf import make_sample_policy_pdf  # noqa: E402
 from src.workflow.steps.policy_structuring import _pages, generate_calc_tool  # noqa: E402
-from src.workflow.steps.policy_structuring._demo_mock import CALC_CODE, CASE, CONVERSION  # noqa: E402
+from src.workflow.steps.policy_structuring._demo_mock import (  # noqa: E402
+    CALC_CODE, CASE, CONVERSION, conversion_mock_responses)
 
 # 실제 실행 건의 파일과 섞이지 않도록 테스트 전용 폴더 사용 (src/data/pdf/ 아래라 git 에서 제외됨)
 _TEST_DATA = DATA_DIR / "pdf" / "_test"
@@ -62,7 +63,10 @@ class PolicyStructuringTest(unittest.TestCase):
             return {"content": {"pages": [3, 4, 5, 99], "notes": "제3~5조"}}  # 99 는 입력 밖 → 버려야 함
 
         llm.set_mock_responses("사고보장 페이지 선별 Agent", [select_pages])
-        llm.set_mock_responses("약관 스키마 변환 Agent", [plan("진행 중", "대기"), plan("완료", "완료"), {"content": CONVERSION}])
+        bad = {**CONVERSION["structured_policy"]["coverages"][0], "coverage_code": "BAD", "clause": {"article": "x", "pages": [6]}}
+        conv_calls = conversion_mock_responses()
+        conv_calls.insert(1, {"tool_calls": [{"name": "save_coverages", "arguments": {"coverages": [bad, {"coverage_code": "NOFIELDS"}]}}]})
+        llm.set_mock_responses("약관 스키마 변환 Agent", conv_calls)
         llm.set_mock_responses("계산 Tool 생성 Agent", [
             {"tool_calls": [{"name": "load_skill", "arguments": {"name": "policy_calc_tool_generator"}}]},
             plan("진행 중", "대기"),
@@ -87,6 +91,10 @@ class PolicyStructuringTest(unittest.TestCase):
         self.assertEqual(conv["structured_policy"]["product_code"], "TEST_ACC_01")  # 입력값으로 덮어씀
         self.assertEqual(len(conv["undefined_items"]), 1)
         self.assertEqual(conv["issues"], [])
+        self.assertTrue(conv["complete"])
+        self.assertEqual([c["coverage_code"] for c in conv["structured_policy"]["coverages"]],
+                         ["INJ_HOSP_DAILY", "FRACTURE_DIAG"])  # 선별 밖 페이지·필수값 누락 보장은 저장 거부
+        self.assertTrue(conv["input_mode"]["full_text"])
         calc = d["generate_calc_tool"]
         self.assertTrue(calc["tool_path"].endswith("_calc_tool.py"))
         self.assertEqual([t["passed"] for t in calc["test_results"]], [True, False])  # 스텝이 직접 재실행해 판정
@@ -96,6 +104,8 @@ class PolicyStructuringTest(unittest.TestCase):
         self.assertTrue(any(o["kind"] == "skill" for o in obs))
         self.assertTrue(any(o["kind"] == "plan" for o in obs))
         self.assertTrue(any(o["name"] == "write_calc_tool" and o["level"] == "ERROR" for o in obs))
+        save_out = [o["output"] for o in obs if o["name"] == "save_coverages"][0]
+        self.assertIn("선별된 페이지가 아닙니다", save_out)
 
         r2 = engine.resume(r.workflow_id, HumanInput(decision="승인", comment="확인", created_by="담당자A"))
         self.assertEqual(r2.status, RunStatus.COMPLETED, r2.error)
@@ -125,6 +135,28 @@ class PolicyStructuringTest(unittest.TestCase):
         self.assertEqual(r2.status, RunStatus.COMPLETED)
         self.assertNotIn("register_product", r2.ctx.completed_steps)
         self.assertIsNone(get_product("ESC"))
+
+    def test_partial_conversion(self) -> None:
+        llm.set_mock_responses("사고보장 페이지 선별 Agent", [{"content": {"pages": [3, 4]}}])
+        cov = CONVERSION["structured_policy"]["coverages"][0]
+        llm.set_mock_responses("약관 스키마 변환 Agent", [
+            {"tool_calls": [{"name": "save_coverages", "arguments": {"coverages": [cov]}}]},
+            {"content": "not json"}, {"content": "still not json"},  # 스키마 검증 2회 실패 → 미완료
+        ])
+        r = engine.start("policy_structuring", {"pdf_path": self.pdf, "product_code": "PART", "product_name": "부분"})
+        conv = r.ctx.data["convert_schema"]
+        self.assertFalse(conv["complete"])
+        self.assertEqual(len(conv["structured_policy"]["coverages"]), 1)  # 저장된 만큼은 검토 화면에 보인다
+        self.assertNotIn("generate_calc_tool", r.ctx.completed_steps)
+        self.assertEqual(r.ctx.escalations[0].details["saved_coverages"], 1)
+
+    def test_all_llm_calls_fail(self) -> None:
+        def boom(messages, tools):
+            raise RuntimeError("OPENAI_API_KEY 가 없습니다")
+        llm.set_mock_responses("사고보장 페이지 선별 Agent", [boom])
+        r = engine.start("policy_structuring", {"pdf_path": self.pdf, "product_code": "F", "product_name": "실패"})
+        self.assertEqual(r.status, RunStatus.FAILED)
+        self.assertIn("OPENAI_API_KEY", r.error)
 
 
 if __name__ == "__main__":

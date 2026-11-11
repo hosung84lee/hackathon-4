@@ -66,16 +66,34 @@ CASE = {"claim": {"policy": {"contract_date": "2026-01-01"}, "accident_date": "2
         "judgments": {"FRACTURE_YN": {"result": "Y"}}}  # 입원 2일 x 30,000 + 골절 50% = 310,000
 
 
-
 def _plan(*statuses):
     return {"tool_calls": [{"name": "update_plan", "arguments": {"items": [
         {"content": f"항목 {i}", "status": s} for i, s in enumerate(statuses)]}}]}
 
 
+def _call(name: str, **arguments):
+    return {"tool_calls": [{"name": name, "arguments": arguments}]}
+
+
+def conversion_mock_responses() -> list[dict]:
+    """변환 Agent 가 CONVERSION 을 툴로 나눠 저장하는 가짜 응답 순서."""
+    policy = CONVERSION["structured_policy"]
+    return [
+        _plan("진행 중", "대기"),
+        _call("read_pages", pages=[3, 4]),
+        _call("save_coverages", coverages=policy["coverages"]),
+        _call("save_judgment_items", items=CONVERSION["judgment_items"]),
+        _call("add_undefined_items", items=CONVERSION["undefined_items"]),
+        _call("set_common_exclusions", exclusions=policy["common_exclusions"]),
+        _plan("완료", "완료"),
+        {"content": {"summary": "보장 2개 (상해입원일당, 골절진단비)", "unconverted": []}},
+    ]
+
+
 def install_demo_mock() -> None:
     """샘플 약관 1건 처리에 필요한 가짜 응답을 등록한다 (실행 1번 분량)."""
     set_mock_responses("사고보장 페이지 선별 Agent", [{"content": {"pages": [3, 4, 5], "notes": "제3~5조 사고보장"}}])
-    set_mock_responses("약관 스키마 변환 Agent", [_plan("진행 중", "대기"), _plan("완료", "완료"), {"content": CONVERSION}])
+    set_mock_responses("약관 스키마 변환 Agent", conversion_mock_responses())
     set_mock_responses("계산 Tool 생성 Agent", [
         {"tool_calls": [{"name": "load_skill", "arguments": {"name": "policy_calc_tool_generator"}}]},
         _plan("진행 중", "대기"),

@@ -18,7 +18,7 @@ CODE = "policy_structuring"
 MOCK = get_settings().use_mock_llm
 
 st.title("보험약관 구조화")
-st.caption("약관 PDF → 사고보장 페이지 추출 → 표준 스키마 변환 → 계산 Tool 생성 → **담당자 검토·승인** → 시스템 반영")
+st.caption("약관 PDF → 보장(보험사고) 페이지 추출 → 표준 스키마 변환 → 계산 Tool 생성 → **담당자 검토·승인** → 시스템 반영")
 
 tab_new, tab_review, tab_products, tab_history = st.tabs(["새 약관 처리", "검토 대기", "반영된 상품", "처리 이력"])
 
@@ -31,11 +31,17 @@ with tab_new:
         product_name = c2.text_input("상품명", "무배당 안심상해보험")
         uploaded = st.file_uploader("약관 PDF", type=["pdf"])
         use_sample = st.checkbox("샘플 약관 사용 (업로드 없이 시연)", value=uploaded is None)
-        use_mock = st.checkbox("샘플 시나리오 가짜 응답 사용", value=True, disabled=not MOCK,
-                               help="USE_MOCK_LLM=1 일 때만 사용. OpenAI 없이 끝까지 시연한다.") if MOCK else False
+        use_mock = st.checkbox("샘플 시나리오 가짜 응답 사용 (샘플 약관일 때만)", value=True,
+                               help="OpenAI 없이 샘플 약관을 끝까지 시연한다.") if MOCK else False
         submitted = st.form_submit_button("AI 처리 시작", type="primary")
     if MOCK:
-        st.info("가짜 LLM 모드(USE_MOCK_LLM=1)로 실행 중입니다.")
+        st.warning("가짜 LLM 모드(USE_MOCK_LLM=1)입니다. 실제 약관을 처리하려면 .env 에 OPENAI_API_KEY 를 넣고 "
+                   "USE_MOCK_LLM=0 으로 바꾼 뒤 앱을 다시 실행하세요.")
+    elif not get_settings().openai_api_key:
+        st.error(".env 에 OPENAI_API_KEY 가 없습니다. 키를 넣고 앱을 다시 실행하세요.")
+    else:
+        st.caption(f"LLM: {get_settings().openai_model} · 200쪽 내외 약관은 수 분이 걸릴 수 있습니다. "
+                   "진행 상황은 '실행 기록 (Trace)' 메뉴에서 볼 수 있습니다.")
 
     if submitted:
         if not product_code.strip() or not product_name.strip():
@@ -49,7 +55,7 @@ with tab_new:
                 from src.workflow.steps.policy_structuring._sample_pdf import make_sample_policy_pdf
 
                 pdf_path = rel_path(make_sample_policy_pdf(DATA_DIR / "pdf" / "sample_policy.pdf"))
-            if use_mock:
+            if use_mock and (uploaded is None or use_sample):  # 실제 업로드 파일에는 가짜 시나리오를 쓰지 않는다
                 from src.workflow.steps.policy_structuring._demo_mock import install_demo_mock
 
                 install_demo_mock()
@@ -87,6 +93,14 @@ def _review_panel(run) -> None:
                      hide_index=True, use_container_width=True)
     for issue in conv.get("issues", []):
         st.warning(f"점검: {issue}")
+    for f in d["find_coverage_pages"].get("failed_chunks", []):
+        st.warning(f"페이지 선별 실패 p.{f['pages']}: {f['reason']}")
+    if conv.get("summary"):
+        st.info(f"변환 요약: {conv['summary']}")
+    for u in conv.get("unconverted", []):
+        st.warning(f"미변환: {u}")
+    if conv and not conv.get("complete", True):
+        st.error("변환이 끝까지 완료되지 않았습니다. 저장된 보장만 표시되며 계산 Tool 은 생성하지 않았습니다.")
 
     t1, t2, t3, t4 = st.tabs(["구조화 약관", "AI 판단 항목", "계산 Tool", "원문 페이지"])
     with t1:
@@ -136,6 +150,10 @@ def _review_panel(run) -> None:
             st.download_button("사고보장 페이지 PDF 받기", abs_path(pdf).read_bytes(),
                                file_name=f"{run.workflow_id}_coverage.pdf", mime="application/pdf")
         st.caption(f"선별 페이지: {d['find_coverage_pages']['pages']}  ·  후보 {d['find_coverage_pages']['candidate_count']}쪽")
+        mode = conv.get("input_mode")
+        if mode:
+            st.caption(f"변환 입력: {'원문 전체' if mode['full_text'] else '목차 + read_pages'} · {mode['total_chars']:,}자 · "
+                       f"PDF 첨부 {'예' if mode['pdf_attached'] else '아니오(페이지 수 초과)'}")
         for n in d["find_coverage_pages"].get("notes", []):
             st.caption(n)
 

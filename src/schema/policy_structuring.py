@@ -79,6 +79,13 @@ class UndefinedItem(BaseModel):
     reason: str = Field(description="스키마에 없는 이유, 추가 정의가 필요한 내용")
 
 
+class ConversionSummary(BaseModel):
+    """변환 Agent 의 최종 응답. 보장·판단 항목·미정의 항목은 툴로 저장하고 최종 응답은 요약만 낸다."""
+
+    summary: str = Field(description="변환 결과 요약 (보장 수, 특이사항)")
+    unconverted: list[str] = Field(default_factory=list, description="변환하지 못한 부분과 이유")
+
+
 class ConversionOutput(BaseModel):
     structured_policy: PolicyStructure
     undefined_items: list[UndefinedItem] = Field(default_factory=list)
