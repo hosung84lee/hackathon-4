@@ -1,0 +1,36 @@
+# 비밀값 (8.3) — 키 목록은 .env.example 에
+.env
+.env.*
+!.env.example
+
+# SQLite DB 파일 (8.3) — 각자 로컬에서 생성
+*.db
+*.sqlite
+*.sqlite3
+src/data/db/*
+!src/data/db/.gitkeep
+
+# 생성된 보험금 계산 Tool (3.5) — 실행마다 만들어지므로 커밋하지 않음
+src/data/generated_tools/*
+!src/data/generated_tools/.gitkeep
+
+# 업로드/실행 중 생성되는 파일 (샘플은 git add -f 로 명시적으로 추가)
+src/data/pdf/*
+!src/data/pdf/.gitkeep
+src/data/image/*
+!src/data/image/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 개인 도구 설정
+.claude/settings.local.json
+.vscode/
+.idea/
+.streamlit/secrets.toml
