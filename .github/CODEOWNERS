@@ -25,6 +25,7 @@
 /src/schema/policy_structuring.py         @OWNER_A
 /src/app/views/policy_structuring.py      @OWNER_A
 /src/data/pdf/                            @OWNER_A
+/tests/test_policy_*                      @OWNER_A
 
 # ── 흐름 2: 청구 심사 (팀원 B) ──────────────────────────────────────
 /src/workflow/claim_review.py             @OWNER_B
@@ -33,3 +34,4 @@
 /src/schema/claim_review.py               @OWNER_B
 /src/app/views/claim_review.py            @OWNER_B
 /src/data/image/                          @OWNER_B
+/tests/test_claim_*                       @OWNER_B

@@ -4,7 +4,7 @@
 ```sh
 git clone https://github.com/hosung84lee/hackathon-4.git
 cd hackathon-4            # 기본 브랜치는 product (GitHub 설정)
-python -m venv .venv
+python -m venv .venv      # 또는: uv venv --python 3.12 .venv && uv pip install -r requirements.txt
 .venv\Scripts\activate    # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env      # OPENAI_API_KEY 입력

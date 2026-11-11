@@ -4,7 +4,8 @@
 > 각 영역 폴더의 `AGENTS.md` 에는 그 영역만의 추가 규칙이 있다. 작업 폴더의 것도 함께 읽는다.
 
 ## 프로젝트
-신상품 보험 AI 워크플로우 프로토타입. 전체 설계는 `docs/design.md` 를 따른다.
+신상품 보험 AI 워크플로우 프로토타입. 전체 설계는 `docs/design.md`, 공통 인터페이스 사용법은 **`docs/interfaces.md`** 를 따른다.
+실행: `streamlit run src/app/main.py` · 점검: `python -m unittest discover -s tests -t .` · 예시 흐름: `src/workflow/examples/demo.py`
 - 흐름 1 `policy_structuring` — 보험약관(사고보장) 구조화
 - 흐름 2 `claim_review` — 보험금 청구 심사 지원
 - 기술: Streamlit(UI) · Python · SQLite · OpenAI API (Agent 직접 구현, LangChain 금지)
@@ -23,7 +24,7 @@
 4. 요청받지 않은 리팩터링, 파일 전체 포맷 변경, 파일 이름 변경을 하지 않는다.
 5. workflow 구성 규칙과 스텝 작성 규칙을 따른다 (아래).
 6. Agent 는 LangChain 등 프레임워크 없이 설계(6장)대로 구현한다.
-7. 커밋하기 전에 실행 확인을 한다.
+7. 커밋하기 전에 실행 확인을 한다 (최소한 `python -m unittest discover -s tests -t .` 와 화면 실행).
 
 ## workflow · 스텝 규칙
 - 플로우 1개 = 워크플로우 파일 1개 (`src/workflow/<code>.py`). 워크플로우 파일은 **스텝 순서·연결·분기 조건만** 담당한다.
