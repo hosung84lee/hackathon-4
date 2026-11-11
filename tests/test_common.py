@@ -172,6 +172,13 @@ class CommonTest(unittest.TestCase):
             print(json.dumps({"total_amount": d["claim"]["base"] * 2}))
         """), encoding="utf-8")
         self.assertEqual(run_calc_tool(str(ok), {"claim": {"base": 5}, "judgments": {}}), {"total_amount": 10})
+        korean = _TMP / "korean_tool.py"  # reconfigure 없이도 한글 입출력이 깨지지 않아야 함 (-X utf8)
+        korean.write_text(textwrap.dedent("""
+            import json, sys
+            d = json.load(sys.stdin)
+            print(json.dumps({"name": d["name"] + " 확인"}, ensure_ascii=False))
+        """), encoding="utf-8")
+        self.assertEqual(run_calc_tool(str(korean), {"name": "골절"}), {"name": "골절 확인"})
         hang = _TMP / "hang_tool.py"
         hang.write_text("import time\ntime.sleep(5)\n", encoding="utf-8")
         with self.assertRaises(CalcToolError):

@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st  # noqa: E402
 
-VIEWS = Path(__file__).parent / "views"
+VIEWS = Path(__file__).resolve().parent / "views"
 
 # (파일, 제목, 아이콘, 메뉴 그룹)
 PAGES = [

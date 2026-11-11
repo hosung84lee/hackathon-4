@@ -13,9 +13,9 @@ cp .env.example .env      # OPENAI_API_KEY 입력
 ## 2. Git 검사 장치 켜기 (필수)
 `.github/CODEOWNERS` 에 적힌 **본인 토큰**으로 등록한다.
 ```sh
-sh scripts/setup-hooks.sh @OWNER_A   # 팀원 A
+sh scripts/setup-hooks.sh @hosung84lee   # 팀원 A
 sh scripts/setup-hooks.sh @OWNER_B   # 팀원 B
-sh scripts/setup-hooks.sh @hosung84lee   # 팀원 C
+sh scripts/setup-hooks.sh @OWNER_C   # 팀원 C
 ```
 - `pre-commit`: 내 소유가 아닌 파일이 커밋에 있으면 거부. `main`/`product` 직접 커밋 거부.
   `develop` 은 검사 안 함. 머지 커밋은 product 에서 받는 경우만 허용.
